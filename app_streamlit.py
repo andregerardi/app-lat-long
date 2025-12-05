@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+from urllib.parse import urlencode
 
 # Configuração da página
 st.set_page_config(
@@ -91,7 +92,7 @@ if 'location_captured' not in st.session_state:
     st.session_state.accuracy = None
 
 # ==================== INTERFACE ====================
-st.title("📍 Capturador de Localização GPS")
+st.title("📍 Localizador Superação")
 st.markdown("Capture a localização do seu dispositivo Android em tempo real")
 
 # Inicializar banco de dados
@@ -108,133 +109,142 @@ with st.sidebar:
 with tab1:
     st.header("Capturar Localização")
     
-    # Script JavaScript para capturar localização do navegador
-    location_script = """
+    # Verificar se há dados GPS nos parâmetros da URL
+    query_params = st.query_params
+    lat = 0.0
+    lon = 0.0
+    alt = 0.0
+    speed = 0.0
+    accuracy = 0.0
+    
+    # Se houver dados GPS na URL, usar eles
+    if 'lat' in query_params and 'lon' in query_params:
+        try:
+            lat = float(query_params.get('lat', 0))
+            lon = float(query_params.get('lon', 0))
+            alt = float(query_params.get('alt', 0))
+            speed = float(query_params.get('speed', 0))
+            accuracy = float(query_params.get('accuracy', 0))
+            st.success("✅ Localização capturada da URL!")
+        except:
+            pass
+    
+    # HTML/JavaScript para capturar GPS e redirecionar com parâmetros
+    st.markdown("### 📍 Capture sua Localização")
+    st.info("⚠️ **IMPORTANTE**: Certifique-se de que o GPS está ATIVADO no seu Android e permita acesso ao site!")
+    
+    st.components.v1.html("""
+    <div style="text-align: center; padding: 20px;">
+        <button id="captureBtn" onclick="captureLocation()" style="
+            width: 100%;
+            max-width: 300px;
+            padding: 20px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        " onmouseover="this.style.boxShadow='0 6px 12px rgba(0,0,0,0.2)'" 
+           onmouseout="this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)'">
+            📍 CAPTURAR LOCALIZAÇÃO
+        </button>
+        <div id="status" style="margin-top: 15px; font-size: 16px; min-height: 30px;"></div>
+        <div id="coords" style="margin-top: 15px; font-size: 14px; color: #666; display: none;"></div>
+    </div>
+    
     <script>
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const alt = position.coords.altitude || 0;
-                const speed = position.coords.speed || 0;
-                const accuracy = position.coords.accuracy;
-                
-                // Salvar em sessionStorage para Streamlit ler
-                sessionStorage.setItem('gps_data', JSON.stringify({
-                    latitude: lat,
-                    longitude: lon,
-                    altitude: alt,
-                    speed: speed,
-                    accuracy: accuracy,
-                    timestamp: new Date().toISOString()
-                }));
-                
-                // Disparar evento customizado
-                window.dispatchEvent(new Event('gps_updated'));
-            },
-            function(error) {
-                alert('Erro ao obter localização: ' + error.message);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    } else {
-        alert('Geolocalização não suportada neste navegador');
+    function captureLocation() {
+        const btn = document.getElementById('captureBtn');
+        const status = document.getElementById('status');
+        const coords = document.getElementById('coords');
+        
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        status.innerHTML = '<span style="color: #0066cc;"><b>⏳ Capturando localização...</b></span>';
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const alt = position.coords.altitude || 0;
+                    const speed = position.coords.speed || 0;
+                    const accuracy = position.coords.accuracy || 0;
+                    
+                    status.innerHTML = '<span style="color: green;"><b>✓ Localização capturada!</b></span>';
+                    coords.innerHTML = `Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`;
+                    coords.style.display = 'block';
+                    
+                    // Redirecionar para URL com parâmetros
+                    const url = new URL(window.location);
+                    url.searchParams.set('lat', lat);
+                    url.searchParams.set('lon', lon);
+                    url.searchParams.set('alt', alt);
+                    url.searchParams.set('speed', speed);
+                    url.searchParams.set('accuracy', accuracy);
+                    
+                    setTimeout(() => {
+                        window.location.href = url.toString();
+                    }, 1000);
+                },
+                function(error) {
+                    let errorMsg = error.message;
+                    if (error.code === error.PERMISSION_DENIED) {
+                        errorMsg = 'Permissão negada! Ative o acesso ao GPS nas configurações do navegador.';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        errorMsg = 'Posição indisponível. Tente ativar o GPS.';
+                    } else if (error.code === error.TIMEOUT) {
+                        errorMsg = 'Tempo limite excedido. Tente novamente.';
+                    }
+                    
+                    status.innerHTML = '<span style="color: red;"><b>✗ Erro: ' + errorMsg + '</b></span>';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            status.innerHTML = '<span style="color: red;"><b>✗ Geolocalização não suportada neste navegador!</b></span>';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
     }
     </script>
-    """
+    """, height=200)
     
-    col1, col2 = st.columns([2, 1])
+    st.markdown("---")
+    st.markdown("### Dados Capturados")
     
-    with col1:
-        st.markdown("### Pressione o botão abaixo para capturar sua localização:")
-        # Capturar do navegador via JavaScript
-        st.components.v1.html("""
-            <div style="text-align: center;">
-                <button id="gpsBtn" style="
-                    width: 100%;
-                    padding: 15px;
-                    font-size: 18px;
-                    background-color: #0066cc;
-                    color: white;
-                    border: none;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    font-weight: bold;
-                ">
-                📍 CAPTURAR LOCALIZAÇÃO
-                </button>
-                <div id="status" style="margin-top: 10px; font-size: 14px;"></div>
-                
-                <input type="hidden" id="lat">
-                <input type="hidden" id="lon">
-                <input type="hidden" id="alt">
-                <input type="hidden" id="speed">
-                <input type="hidden" id="acc">
-            </div>
-            
-            <script>
-            document.getElementById('gpsBtn').addEventListener('click', function() {
-                if (navigator.geolocation) {
-                    document.getElementById('status').innerText = 'Capturando localização...';
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            const lat = position.coords.latitude;
-                            const lon = position.coords.longitude;
-                            const alt = position.coords.altitude || 0;
-                            const speed = position.coords.speed || 0;
-                            const accuracy = position.coords.accuracy;
-                            
-                            document.getElementById('lat').value = lat;
-                            document.getElementById('lon').value = lon;
-                            document.getElementById('alt').value = alt;
-                            document.getElementById('speed').value = speed;
-                            document.getElementById('acc').value = accuracy;
-                            
-                            document.getElementById('status').innerHTML = 
-                                '<span style="color: green;"><b>✓ Localização capturada!</b></span>';
-                        },
-                        function(error) {
-                            document.getElementById('status').innerHTML = 
-                                '<span style="color: red;"><b>✗ Erro: ' + error.message + '</b></span>';
-                        },
-                        {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
-                    );
-                } else {
-                    document.getElementById('status').innerHTML = 
-                        '<span style="color: red;"><b>✗ Geolocalização não suportada</b></span>';
-                }
-            });
-            </script>
-        """, height=100)
-    
-    # Campos para entrada manual (backup)
-    st.markdown("### Ou insira manualmente:")
+    # Campos com valores capturados
     col1, col2 = st.columns(2)
     with col1:
-        lat = st.number_input("Latitude:", format="%.6f", step=0.000001)
+        lat = st.number_input("Latitude:", value=lat, format="%.6f", step=0.000001)
     with col2:
-        lon = st.number_input("Longitude:", format="%.6f", step=0.000001)
+        lon = st.number_input("Longitude:", value=lon, format="%.6f", step=0.000001)
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        alt = st.number_input("Altitude (m):", format="%.2f")
+        alt = st.number_input("Altitude (m):", value=alt, format="%.2f")
     with col2:
-        speed = st.number_input("Velocidade (m/s):", format="%.2f")
+        speed = st.number_input("Velocidade (m/s):", value=speed, format="%.2f")
     with col3:
-        accuracy = st.number_input("Precisão (m):", format="%.2f")
+        accuracy = st.number_input("Precisão (m):", value=accuracy, format="%.2f")
     
     description = st.text_area("📝 Descrição/Observações:", placeholder="Adicione informações sobre este ponto...")
     
-    # Botão de salvar
+    # Botões de ação
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("💾 Salvar Localização", key="save_btn"):
-            if lat == 0 and lon == 0:
+            if lat == 0.0 and lon == 0.0:
                 st.error("❌ Por favor, defina latitude e longitude válidas!")
             else:
                 salvar_localizacao(lat, lon, alt, speed, accuracy, user_name or "Anônimo", description)
@@ -246,7 +256,7 @@ with tab1:
             st.rerun()
     
     # Exibir mapa com a localização atual
-    if lat != 0 and lon != 0:
+    if lat != 0.0 and lon != 0.0:
         st.markdown("### 🗺️ Mapa da Localização")
         m = folium.Map(
             location=[lat, lon],

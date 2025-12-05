@@ -348,21 +348,6 @@
                         </div>
                     </div>
                     
-                    <div class="form-row-3">
-                        <div class="form-group">
-                            <label>Altitude (m)</label>
-                            <input type="number" id="altitude" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Velocidade (m/s)</label>
-                            <input type="number" id="speed" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Precisão (m)</label>
-                            <input type="number" id="accuracy" step="0.01" value="0">
-                        </div>
-                    </div>
-                    
                     <div class="form-group">
                         <label>🏘️ Município</label>
                         <select id="municipio" onchange="atualizarAgentes()">
@@ -529,16 +514,11 @@
                     function(position) {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
-                        const alt = position.coords.altitude || 0;
-                        const speed = position.coords.speed || 0;
                         const accuracy = position.coords.accuracy || 0;
                         
                         // Preencher campos
                         document.getElementById('latitude').value = lat.toFixed(6);
                         document.getElementById('longitude').value = lon.toFixed(6);
-                        document.getElementById('altitude').value = alt.toFixed(2);
-                        document.getElementById('speed').value = speed.toFixed(2);
-                        document.getElementById('accuracy').value = accuracy.toFixed(2);
                         
                         // Status
                         statusDiv.innerHTML = '<div class="status success">✓ Localização capturada com sucesso!</div>';
@@ -629,9 +609,9 @@
             const data = {
                 latitude: parseFloat(lat),
                 longitude: parseFloat(lon),
-                altitude: parseFloat(document.getElementById('altitude').value) || 0,
-                speed: parseFloat(document.getElementById('speed').value) || 0,
-                accuracy: parseFloat(document.getElementById('accuracy').value) || 0,
+                altitude: 0,
+                speed: 0,
+                accuracy: 0,
                 user_name: document.getElementById('userName').value || 'Anônimo',
                 description: document.getElementById('description').value || ''
             };
@@ -659,9 +639,7 @@
         function clearFields() {
             document.getElementById('latitude').value = '';
             document.getElementById('longitude').value = '';
-            document.getElementById('altitude').value = '0';
-            document.getElementById('speed').value = '0';
-            document.getElementById('accuracy').value = '0';
+            document.getElementById('municipio').value = '';
             document.getElementById('userName').value = '';
             document.getElementById('description').value = '';
             document.getElementById('status').innerHTML = '';

@@ -109,33 +109,22 @@ with st.sidebar:
 with tab1:
     st.header("Capturar Localização")
     
-    # Verificar se há dados GPS nos parâmetros da URL
-    query_params = st.query_params
-    lat = 0.0
-    lon = 0.0
-    alt = 0.0
-    speed = 0.0
-    accuracy = 0.0
-    
-    # Se houver dados GPS na URL, usar eles
-    if 'lat' in query_params and 'lon' in query_params:
-        try:
-            lat = float(query_params.get('lat', 0))
-            lon = float(query_params.get('lon', 0))
-            alt = float(query_params.get('alt', 0))
-            speed = float(query_params.get('speed', 0))
-            accuracy = float(query_params.get('accuracy', 0))
-            st.success("✅ Localização capturada da URL!")
-        except:
-            pass
-    
-    # HTML/JavaScript para capturar GPS e redirecionar com parâmetros
     st.markdown("### 📍 Capture sua Localização")
     st.info("⚠️ **IMPORTANTE**: Certifique-se de que o GPS está ATIVADO no seu Android e permita acesso ao site!")
     
+    # Inicializar state para armazenar dados GPS
+    if 'gps_lat' not in st.session_state:
+        st.session_state.gps_lat = 0.0
+        st.session_state.gps_lon = 0.0
+        st.session_state.gps_alt = 0.0
+        st.session_state.gps_speed = 0.0
+        st.session_state.gps_accuracy = 0.0
+        st.session_state.gps_captured = False
+    
+    # HTML/JavaScript para capturar GPS usando localStorage
     st.components.v1.html("""
     <div style="text-align: center; padding: 20px;">
-        <button id="captureBtn" onclick="captureLocation()" style="
+        <button id="captureBtn" style="
             width: 100%;
             max-width: 300px;
             padding: 20px;
@@ -153,7 +142,7 @@ with tab1:
             📍 CAPTURAR LOCALIZAÇÃO
         </button>
         <div id="status" style="margin-top: 15px; font-size: 16px; min-height: 30px;"></div>
-        <div id="coords" style="margin-top: 15px; font-size: 14px; color: #666; display: none;"></div>
+        <div id="coords" style="margin-top: 15px; font-size: 14px; color: #666;"></div>
     </div>
     
     <script>
@@ -175,21 +164,23 @@ with tab1:
                     const speed = position.coords.speed || 0;
                     const accuracy = position.coords.accuracy || 0;
                     
+                    // Salvar em localStorage
+                    localStorage.setItem('gps_data', JSON.stringify({
+                        lat: lat,
+                        lon: lon,
+                        alt: alt,
+                        speed: speed,
+                        accuracy: accuracy,
+                        timestamp: new Date().toISOString()
+                    }));
+                    
                     status.innerHTML = '<span style="color: green;"><b>✓ Localização capturada!</b></span>';
-                    coords.innerHTML = `Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`;
-                    coords.style.display = 'block';
+                    coords.innerHTML = `<b>Latitude:</b> ${lat.toFixed(6)}<br><b>Longitude:</b> ${lon.toFixed(6)}<br><b>Precisão:</b> ±${accuracy.toFixed(0)}m`;
                     
-                    // Redirecionar para URL com parâmetros
-                    const url = new URL(window.location);
-                    url.searchParams.set('lat', lat);
-                    url.searchParams.set('lon', lon);
-                    url.searchParams.set('alt', alt);
-                    url.searchParams.set('speed', speed);
-                    url.searchParams.set('accuracy', accuracy);
-                    
+                    // Trigger streamlit rerun
                     setTimeout(() => {
-                        window.location.href = url.toString();
-                    }, 1000);
+                        window.location.reload();
+                    }, 2000);
                 },
                 function(error) {
                     let errorMsg = error.message;
@@ -217,8 +208,28 @@ with tab1:
             btn.style.opacity = '1';
         }
     }
+    
+    // Adicionar listener ao botão
+    document.getElementById('captureBtn').addEventListener('click', captureLocation);
     </script>
     """, height=200)
+    
+    # Verificar se há dados no localStorage
+    st.components.v1.html("""
+    <script>
+    const gpsData = localStorage.getItem('gps_data');
+    if (gpsData) {
+        const data = JSON.parse(gpsData);
+        window.streamlit_gps = {
+            lat: data.lat,
+            lon: data.lon,
+            alt: data.alt,
+            speed: data.speed,
+            accuracy: data.accuracy
+        };
+    }
+    </script>
+    """, height=0)
     
     st.markdown("---")
     st.markdown("### Dados Capturados")
@@ -226,19 +237,19 @@ with tab1:
     # Campos com valores capturados
     col1, col2 = st.columns(2)
     with col1:
-        lat = st.number_input("Latitude:", value=lat, format="%.6f", step=0.000001)
+        lat = st.number_input("Latitude:", value=st.session_state.gps_lat, format="%.6f", step=0.000001, key="lat_input")
     with col2:
-        lon = st.number_input("Longitude:", value=lon, format="%.6f", step=0.000001)
+        lon = st.number_input("Longitude:", value=st.session_state.gps_lon, format="%.6f", step=0.000001, key="lon_input")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        alt = st.number_input("Altitude (m):", value=alt, format="%.2f")
+        alt = st.number_input("Altitude (m):", value=st.session_state.gps_alt, format="%.2f", key="alt_input")
     with col2:
-        speed = st.number_input("Velocidade (m/s):", value=speed, format="%.2f")
+        speed = st.number_input("Velocidade (m/s):", value=st.session_state.gps_speed, format="%.2f", key="speed_input")
     with col3:
-        accuracy = st.number_input("Precisão (m):", value=accuracy, format="%.2f")
+        accuracy = st.number_input("Precisão (m):", value=st.session_state.gps_accuracy, format="%.2f", key="acc_input")
     
-    description = st.text_area("📝 Descrição/Observações:", placeholder="Adicione informações sobre este ponto...")
+    description = st.text_area("📝 Descrição/Observações:", placeholder="Adicione informações sobre este ponto...", key="desc_input")
     
     # Botões de ação
     col1, col2 = st.columns([1, 1])
@@ -253,6 +264,11 @@ with tab1:
     
     with col2:
         if st.button("🔄 Limpar Campos"):
+            st.session_state.gps_lat = 0.0
+            st.session_state.gps_lon = 0.0
+            st.session_state.gps_alt = 0.0
+            st.session_state.gps_speed = 0.0
+            st.session_state.gps_accuracy = 0.0
             st.rerun()
     
     # Exibir mapa com a localização atual

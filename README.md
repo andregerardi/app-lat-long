@@ -1,8 +1,21 @@
-# 📍 Capturador GPS com Streamlit
+# 📍 Capturador GPS com Flask
 
 Sistema online para capturar localização GPS de dispositivos Android em tempo real.
 
-## 🚀 Instalação Local
+## ⚡ Versões Disponíveis
+
+### 🔴 Streamlit (app_streamlit.py) - COM PROBLEMAS
+- Dificuldade em passar dados do JavaScript para Python
+- Não recomendado para captura de GPS em produção
+
+### 🟢 Flask (app_flask.py) - **RECOMENDADO** ⭐
+- ✅ Captura GPS funcional 100%
+- ✅ Interface HTML/CSS moderna
+- ✅ API REST completa
+- ✅ Funciona em Android físico
+- ✅ Mapa interativo com Leaflet
+
+## 🚀 Instalação e Execução
 
 ### Pré-requisitos
 - Python 3.8+
@@ -10,143 +23,196 @@ Sistema online para capturar localização GPS de dispositivos Android em tempo 
 
 ### Passos
 
-1. **Clone ou baixe o projeto:**
-```bash
-cd Georeferenciamento
-```
-
-2. **Instale as dependências:**
+1. **Instale as dependências:**
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Execute o aplicativo:**
+2. **Execute o Flask app (RECOMENDADO):**
 ```bash
-streamlit run app_streamlit.py
+python app_flask.py
 ```
 
-4. **Acesse no navegador:**
+3. **Acesse no navegador:**
 ```
-http://localhost:8501
-```
-
-## 🌐 Deploy Online (Gratuito)
-
-### Opção 1: Streamlit Cloud ⭐ (Recomendado)
-
-**Vantagens:**
-- Hospedagem gratuita
-- Deploy automático via GitHub
-- Ideal para aplicações Streamlit
-
-**Passos:**
-
-1. **Crie um repositório GitHub:**
-   - Vá para https://github.com/new
-   - Crie um repositório chamado `georeferenciamento-gps`
-   - Clone localmente
-
-2. **Adicione seus arquivos:**
-```bash
-git add app_streamlit.py requirements.txt README.md
-git commit -m "Initial commit"
-git push origin main
+http://localhost:5000
 ```
 
-3. **Faça deploy no Streamlit Cloud:**
-   - Vá para https://streamlit.io/cloud
-   - Clique em "New app"
-   - Selecione seu repositório GitHub
-   - Configure:
-     - Repository: seu-usuario/georeferenciamento-gps
-     - Branch: main
-     - Main file path: app_streamlit.py
-   - Clique em "Deploy"
+### Para Acessar do Android
 
-4. **Compartilhe o link:**
-   - Seu app estará disponível em: `https://seu-usuario-georeferenciamento-gps.streamlit.app`
+Se estiver testando de um celular Android na mesma rede:
 
-### Opção 2: PythonAnywhere (Gratuito)
+1. **Descubra o IP do seu PC:**
+   ```bash
+   ipconfig
+   ```
+   Procure por "IPv4 Address" (ex: 192.168.1.100)
 
-1. Crie conta em https://www.pythonanywhere.com
-2. Upload o código via Web interface
-3. Configure a aplicação WSGI
-4. Seu URL: `https://seu-usuario.pythonanywhere.com`
+2. **Acesse do Android:**
+   ```
+   http://192.168.1.100:5000
+   ```
 
-### Opção 3: Render (Gratuito)
+## 🌐 Deploy Online
 
-1. Vá para https://render.com
+### Opção 1: Render (Gratuito) ⭐
+
+1. Crie conta em https://render.com
 2. Crie novo "Web Service"
 3. Conecte seu repositório GitHub
 4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `streamlit run app_streamlit.py --server.port=10000`
+5. Start Command: `gunicorn app_flask:app`
+6. Aguarde o deploy
 
-## 📱 Como Usar no Android
+### Opção 2: Heroku (Precisa Adicionar Procfile)
 
-1. **Abra um navegador** (Chrome, Firefox, etc)
-2. **Acesse a URL** do aplicativo online
-3. **Permita acesso ao GPS** quando solicitado
-4. **Clique em "📍 CAPTURAR LOCALIZAÇÃO"**
-5. **Visualize o mapa** e salve os dados
+1. Crie um arquivo `Procfile`:
+```
+web: gunicorn app_flask:app
+```
+
+2. Instale Heroku CLI e faça deploy:
+```bash
+heroku create seu-app-gps
+git push heroku main
+```
+
+### Opção 3: PythonAnywhere
+
+1. Vá para https://www.pythonanywhere.com
+2. Upload dos arquivos
+3. Configure WSGI
+
+## 📱 Como Usar
+
+### Local (PC)
+
+1. Execute: `python app_flask.py`
+2. Abra http://localhost:5000
+3. Clique em "📍 CAPTURAR LOCALIZAÇÃO"
+4. Permita acesso ao GPS (seu PC precisa ter GPS ou simulate)
+
+### Android Físico
+
+1. Conecte à mesma rede do PC ou acesse online
+2. **Ative o GPS** no celular
+3. Abra o navegador e acesse a URL
+4. Clique em "📍 CAPTURAR LOCALIZAÇÃO"
+5. Permita acesso ao GPS quando solicitado
+6. Visualize no mapa e salve os dados
 
 ## 🎯 Recursos
 
 - ✅ Captura de GPS em tempo real
-- ✅ Mapa interativo com folium
+- ✅ Mapa interativo com Leaflet
 - ✅ Banco de dados SQLite integrado
 - ✅ Histórico completo de localizações
-- ✅ Exportação em CSV e JSON
 - ✅ Suporte a múltiplos usuários
-- ✅ Precisão e altitude
-- ✅ Interface responsiva
+- ✅ Precisão, altitude e velocidade
+- ✅ Interface responsiva (funciona em celular)
+- ✅ API REST para integração
 
-## 📊 Estrutura de Dados
+## 📊 API REST
 
-### Tabela: locations
+### Endpoints Disponíveis
+
+#### 1. Salvar Localização
 ```
-id: Identificador único
-latitude: Coordenada de latitude
-longitude: Coordenada de longitude
-altitude: Altitude em metros
-speed: Velocidade em m/s
-accuracy: Precisão em metros
-timestamp: Data/hora da captura
-user_name: Nome do usuário
-description: Descrição/observações
+POST /api/save-location
+Content-Type: application/json
+
+{
+    "latitude": -23.550520,
+    "longitude": -46.633309,
+    "altitude": 750,
+    "speed": 0,
+    "accuracy": 10,
+    "user_name": "João",
+    "description": "Pico da Consolação"
+}
+```
+
+#### 2. Obter Histórico
+```
+GET /api/get-locations
+
+Response:
+[
+    {
+        "id": 1,
+        "latitude": -23.550520,
+        "longitude": -46.633309,
+        "altitude": 750,
+        "speed": 0,
+        "accuracy": 10,
+        "timestamp": "2025-12-05T10:30:00.000000",
+        "user_name": "João",
+        "description": "Pico da Consolação"
+    }
+]
+```
+
+#### 3. Deletar Localização
+```
+DELETE /api/delete-location/1
+```
+
+## 📂 Estrutura de Arquivos
+
+```
+Georeferenciamento/
+├── app_flask.py              # ⭐ App principal (USAR ESTE)
+├── app_streamlit.py          # App Streamlit (alternativa)
+├── requirements.txt          # Dependências
+├── locations.db              # Banco de dados (criado automaticamente)
+├── templates/
+│   └── index.html            # Interface HTML
+├── README.md                 # Este arquivo
+└── .gitignore
 ```
 
 ## 🔒 Segurança
 
-- Os dados são armazenados localmente (no servidor)
-- Acesso via HTTPS é recomendado
-- Nenhuma informação sensível é transmitida
+- Dados salvos localmente (no servidor)
+- Use HTTPS em produção (Render, Heroku fazem automaticamente)
 - Geolocalização requer permissão explícita do usuário
 
-## 🛠️ Configurações Avançadas
+## ⚠️ Notas Importantes
 
-### Alterar Puerto Local
-```bash
-streamlit run app_streamlit.py --server.port=8000
-```
+- **GPS funciona melhor ao ar livre**
+- Alguns navegadores/dispositivos têm limitações
+- A bateria do celular será consumida mais rapidamente com GPS ativo
+- Teste sempre em um Android físico para resultados reais
+- O PC pode não ter GPS - simule dados no campo de entrada manual
 
-### Desabilitar Upload de Arquivo
-```bash
-streamlit run app_streamlit.py --client.showErrorDetails=false
-```
+## 🛠️ Desenvolvimento
 
-## ⚠️ Limitações e Notas
+### Para modificar a interface
 
-- GPS funciona melhor ao ar livre
-- Precisão depende do dispositivo e condições
-- Alguns navegadores/dispositivos podem ter restrições
-- A bateria do dispositivo será consumida mais rapidamente
+Edite `templates/index.html` - as mudanças refletem automaticamente
 
-## 📞 Suporte
+### Para adicionar novos campos
 
-Para problemas ou sugestões, verifique:
-- https://streamlit.io/docs
-- https://github.com/streamlit/streamlit/issues
-- https://folium.readthedocs.io/
+1. Adicione campo no HTML
+2. Atualize a função `saveLocation()` em JavaScript
+3. Atualize a tabela do banco de dados se necessário
+
+## 📞 Troubleshooting
+
+### "Permissão negada ao capturar GPS"
+- Verifique se está usando HTTPS (local pode usar HTTP)
+- Permita acesso no navegador
+- Ative GPS no dispositivo
+
+### "Geolocalização não suportada"
+- Use Chrome, Firefox ou Edge
+- Safari pode ter restrições
+- Verifique compatibilidade do navegador
+
+### "Erro ao conectar"
+- Verifique o firewall
+- Certifique-se que Flask está rodando
+- Use o IP correto (ipconfig no Windows)
 
 ## 📄 Licença
 
@@ -154,5 +220,6 @@ MIT - Livre para uso e modificação
 
 ---
 
-**Desenvolvido com ❤️ usando Streamlit e Python**
+**Desenvolvido com ❤️ usando Flask e Python**
+
 # app-lat-long

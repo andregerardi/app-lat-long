@@ -154,7 +154,31 @@ with tab1:
         st.markdown("### Pressione o botão abaixo para capturar sua localização:")
         # Capturar do navegador via JavaScript
         st.components.v1.html("""
-            <button onclick="
+            <div style="text-align: center;">
+                <button id="gpsBtn" style="
+                    width: 100%;
+                    padding: 15px;
+                    font-size: 18px;
+                    background-color: #0066cc;
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">
+                📍 CAPTURAR LOCALIZAÇÃO
+                </button>
+                <div id="status" style="margin-top: 10px; font-size: 14px;"></div>
+                
+                <input type="hidden" id="lat">
+                <input type="hidden" id="lon">
+                <input type="hidden" id="alt">
+                <input type="hidden" id="speed">
+                <input type="hidden" id="acc">
+            </div>
+            
+            <script>
+            document.getElementById('gpsBtn').addEventListener('click', function() {
                 if (navigator.geolocation) {
                     document.getElementById('status').innerText = 'Capturando localização...';
                     navigator.geolocation.getCurrentPosition(
@@ -172,35 +196,20 @@ with tab1:
                             document.getElementById('acc').value = accuracy;
                             
                             document.getElementById('status').innerHTML = 
-                                '<span style=\"color: green;\"><b>✓ Localização capturada!</b></span>';
+                                '<span style="color: green;"><b>✓ Localização capturada!</b></span>';
                         },
                         function(error) {
                             document.getElementById('status').innerHTML = 
-                                '<span style=\"color: red;\"><b>✗ Erro: ' + error.message + '</b></span>';
+                                '<span style="color: red;"><b>✗ Erro: ' + error.message + '</b></span>';
                         },
                         {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
                     );
+                } else {
+                    document.getElementById('status').innerHTML = 
+                        '<span style="color: red;"><b>✗ Geolocalização não suportada</b></span>';
                 }
-            " style="
-                width: 100%;
-                padding: 15px;
-                font-size: 18px;
-                background-color: #0066cc;
-                color: white;
-                border: none;
-                border-radius: 10px;
-                cursor: pointer;
-                font-weight: bold;
-            ">
-            📍 CAPTURAR LOCALIZAÇÃO
-            </button>
-            <div id="status" style="margin-top: 10px; font-size: 14px;"></div>
-            
-            <input type="hidden" id="lat">
-            <input type="hidden" id="lon">
-            <input type="hidden" id="alt">
-            <input type="hidden" id="speed">
-            <input type="hidden" id="acc">
+            });
+            </script>
         """, height=100)
     
     # Campos para entrada manual (backup)
